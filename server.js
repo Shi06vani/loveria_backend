@@ -1,12 +1,10 @@
+import "dotenv/config";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import app from "./app.js";
 import db from "./models/index.js";
-import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import * as ChatService from "./services/chat.service.js";
-
-dotenv.config();
 
 const PORT = process.env.PORT || 5000;
 

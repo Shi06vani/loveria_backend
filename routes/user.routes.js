@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getProfile, updateProfile } from "../controllers/user.controller.js";
+import { getProfile, updateProfile, getRecommendations, getPublicProfile } from "../controllers/user.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import upload from "../middlewares/upload.middleware.js";
 import validate from "../middlewares/validation.middleware.js";
@@ -11,6 +11,8 @@ const router = Router();
 router.use(authenticate);
 
 router.get("/profile", getProfile);
+router.get("/profile/:id", getPublicProfile);
+router.get("/recommendations", getRecommendations);
 
 // Update profile with image upload support and validation
 // Note: Multer middleware must run BEFORE validation middleware because it parses the form-data body.

@@ -101,3 +101,82 @@ export const updateProfile = async (req, res) => {
     return errorResponse(res, error.message, 500);
   }
 };
+
+/**
+ * Get Recommendations (for Home Screen Swipe)
+ */
+export const getRecommendations = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // fetch profile of all users except the current one
+    const users = await UserProfile.findAll({
+      where: {
+        userId: {
+          [db.Sequelize.Op.ne]: userId
+        }
+      },
+      include: [
+        {
+          model: Auth,
+          as: "user",
+          attributes: ["id", "name", "email", "contact"],
+        },
+      ],
+      limit: 20,
+    });
+
+    // Map to frontend expectations
+    const mappedUsers = users.map(u => ({
+      id: u.userId,
+      name: u.user?.name || "Unknown",
+      age: 22, // Fallback since DB has no age
+      bio: u.relationshipGoal || u.city || "Looking for someone special",
+      image: u.photo ? `${process.env.BASE_URL || "http://10.0.2.2:5000"}/${u.photo}`.replace(/([^:]\/)\/+/g, "$1") : "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e",
+    }));
+
+    return sendResponse(res, true, 200, mappedUsers, "Recommendations fetched successfully");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+/**
+ * Get Public User Profile by ID
+ */
+export const getPublicProfile = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const profile = await UserProfile.findOne({
+      where: { userId: id },
+      include: [
+        {
+          model: Auth,
+          as: "user",
+          attributes: ["id", "name", "email", "contact"],
+        },
+      ],
+    });
+
+    if (!profile) {
+      return errorResponse(res, "User profile not found", 404);
+    }
+
+    // Map to the same format the frontend expects for cards
+    const mappedUser = {
+      id: profile.userId,
+      name: profile.user?.name || "Unknown",
+      age: 22, // Fallback
+      bio: profile.relationshipGoal || "Looking for someone special",
+      city: profile.city || "Nearby",
+      interests: profile.interests || [],
+      photo: profile.photo ? profile.photo : null,
+      image: profile.photo ? `${process.env.BASE_URL || "http://10.0.2.2:5000"}/${profile.photo}`.replace(/([^:]\/)\/+/g, "$1") : null,
+    };
+
+    return sendResponse(res, true, 200, mappedUser, "User profile fetched successfully");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};

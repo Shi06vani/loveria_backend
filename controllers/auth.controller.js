@@ -145,11 +145,11 @@ export const forgotPassword = async (req, res) => {
 };
 
 /**
- * RESET PASSWORD
+ * VERIFY OTP
  */
-export const resetPassword = async (req, res) => {
+export const verifyOtp = async (req, res) => {
   try {
-    const { email, otp, password } = req.body;
+    const { email, otp } = req.body;
 
     const user = await Auth.findOne({
       where: {
@@ -163,15 +163,48 @@ export const resetPassword = async (req, res) => {
       return sendResponse(res, false, 400, {}, "Invalid OTP or OTP expired");
     }
 
-    // Set new password
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
-    user.password = hashedPassword;
-    
     // Delete OTP logic to ensure it doesn't stay permanently
     user.otp = null;
     user.otpExpire = null;
+    await user.save();
 
+    // Create token so the user can reset the password using this token
+    const token = generateToken({
+      id: user.id,
+      role: user.role || "user",
+    });
+
+    return sendResponse(
+      res,
+      true,
+      200,
+      { token },
+      "OTP Verified Successfully"
+    );
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+/**
+ * RESET PASSWORD
+ */
+export const resetPassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+    
+    // User is extracted from authenticate middleware
+    const userId = req.user.id;
+    const user = await Auth.findByPk(userId);
+
+    if (!user) {
+      return sendResponse(res, false, 404, {}, "User not found");
+    }
+
+    // Set new password
+    const hashedPassword = await bcrypt.hash(password, 12);
+    user.password = hashedPassword;
+    
     await user.save();
 
     return sendResponse(res, true, 200, {}, "Password updated successfully");
